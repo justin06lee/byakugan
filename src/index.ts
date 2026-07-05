@@ -4,4 +4,6 @@ export { observe } from './observe.js';
 export type { Manifest, ElementRecord, ObserveOpts } from './observe.js';
 export type { CdpTransport } from './transport.js';
 export { IdAllocator } from './ids.js';
+export { Actions } from './actions.js';
+export type { ActionResult } from './actions.js';
 export { estimateTextTokens, estimateImageTokens } from './tokens.js';

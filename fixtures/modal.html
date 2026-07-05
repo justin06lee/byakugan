@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html><head><title>Modal Fixture</title>
+<style>
+  #overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex;
+             align-items:center; justify-content:center; }
+  #dialog { background:#fff; padding:24px; }
+</style></head>
+<body>
+  <h1>Store</h1>
+  <button id="buy" onclick="document.title='BOUGHT'">Buy now</button>
+  <div id="overlay">
+    <div id="dialog" class="cookie-banner">
+      <p>We use cookies.</p>
+      <button id="accept" onclick="document.getElementById('overlay').remove()">Accept cookies</button>
+    </div>
+  </div>
+</body></html>

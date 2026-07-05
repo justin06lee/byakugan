@@ -2,6 +2,7 @@ import type { CdpTransport } from './transport.js';
 import { observe, type Manifest, type ObserveOpts, type ElementRecord } from './observe.js';
 import { IdAllocator } from './ids.js';
 import { estimateTextTokens, estimateImageTokens } from './tokens.js';
+import { Actions } from './actions.js';
 
 export interface ManifestDiff {
   /** LLM-facing diff text (or full manifest text when full=true). */
@@ -31,8 +32,12 @@ export class Byakugan {
   private last: Manifest | null = null;
   private navPending = false;
   private changeListeners = new Set<(hint: ChangeHint) => void>();
+  /** Verified input dispatch bound to this target's manifest IDs. */
+  readonly act: Actions;
 
-  private constructor(private cdp: CdpTransport) {}
+  private constructor(private cdp: CdpTransport) {
+    this.act = new Actions(cdp, this);
+  }
 
   static async attach(cdp: CdpTransport): Promise<Byakugan> {
     const b = new Byakugan(cdp);
