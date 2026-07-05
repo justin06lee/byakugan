@@ -6,6 +6,7 @@
   "license": "MIT",
   "scripts": {
     "m0": "tsx scripts/m0.ts",
+    "test": "tsx --test tests/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

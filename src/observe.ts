@@ -1,5 +1,6 @@
 import type { CdpTransport } from './transport.js';
 import { estimateTextTokens } from './tokens.js';
+import { IdAllocator } from './ids.js';
 
 /**
  * observe(): one DOMSnapshot.captureSnapshot call → filtered, viewport-clipped,
@@ -11,7 +12,7 @@ import { estimateTextTokens } from './tokens.js';
  * only. See SPEC.md §4, §8.
  */
 
-const STYLE_KEYS = ['display', 'visibility', 'opacity', 'cursor'];
+const STYLE_KEYS = ['display', 'visibility', 'opacity', 'cursor', 'clip', 'clip-path'];
 
 const INTERACTIVE_TAGS = new Set(['a', 'button', 'input', 'select', 'textarea', 'summary']);
 const INTERACTIVE_ROLES = new Set([
@@ -25,6 +26,10 @@ const HEADING_RE = /^h[1-6]$/;
 export interface ObserveOpts {
   /** Hard cap on manifest text tokens. Overflow is announced, never silent. */
   maxTokens?: number;
+  /** Stable ID allocator shared across observations. Fresh one if omitted. */
+  ids?: IdAllocator;
+  /** Fetch the AX tree for role/state enrichment (icon-only buttons). Default true. */
+  includeAx?: boolean;
 }
 
 export interface ElementRecord {
@@ -33,11 +38,15 @@ export interface ElementRecord {
   role: string;
   label: string;
   bounds: { x: number; y: number; w: number; h: number };
+  /** The rendered manifest line — diff() compares these verbatim. */
+  line: string;
 }
 
 export interface Manifest {
   text: string;
   elements: ElementRecord[];
+  /** Non-element lines (text, headings-without-records, collapse summaries) for diffing. */
+  otherLines: string[];
   meta: {
     url: string;
     title: string;
@@ -63,9 +72,28 @@ const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…'
 
 export async function observe(cdp: CdpTransport, opts: ObserveOpts = {}): Promise<Manifest> {
   const maxTokens = opts.maxTokens ?? 800;
+  const ids = opts.ids ?? new IdAllocator();
 
   for (const method of ['DOM.enable', 'Page.enable', 'DOMSnapshot.enable']) {
     try { await cdp.send(method); } catch { /* some hosts pre-enable domains */ }
+  }
+
+  // AX tree: role/state enrichment only. Names are used solely as a clearly
+  // marked "(aria)" fallback for elements with no painted text (icon buttons) —
+  // painted text always wins because pages can spoof aria attributes.
+  const axByBackendId = new Map<number, { role: string; name: string }>();
+  if (opts.includeAx !== false) {
+    try {
+      await cdp.send('Accessibility.enable');
+      const ax = await cdp.send<{ nodes: any[] }>('Accessibility.getFullAXTree');
+      for (const n of ax.nodes) {
+        if (n.ignored || n.backendDOMNodeId === undefined) continue;
+        axByBackendId.set(n.backendDOMNodeId, {
+          role: n.role?.value ?? '',
+          name: (n.name?.value ?? '').replace(/\s+/g, ' ').trim(),
+        });
+      }
+    } catch { /* AX unavailable on some targets; degrade gracefully */ }
   }
 
   const metrics = await cdp.send<any>('Page.getLayoutMetrics');
@@ -121,6 +149,11 @@ export async function observe(cdp: CdpTransport, opts: ObserveOpts = {}): Promis
     const l = layoutOf.get(i);
     if (!l) return null;
     if (l.w < 1 || l.h < 1) return null;
+    // Screen-reader-only tricks: 1x1 boxes, clip:rect(0..), clip-path:inset(50%+).
+    if (l.w <= 1.5 && l.h <= 1.5) return null;
+    if (/rect\(\s*0px[, ]+0px[, ]+0px[, ]+0px\s*\)/.test(l.style.clip ?? '')) return null;
+    const clipPath = l.style['clip-path'] ?? '';
+    if (/inset\(\s*(50|[6-9]\d|100)%/.test(clipPath)) return null;
     if (l.style.visibility === 'hidden' || l.style.visibility === 'collapse') return null;
     const op = parseFloat(l.style.opacity || '1');
     if (!Number.isNaN(op) && op <= 0.05) return null;
@@ -240,12 +273,26 @@ export async function observe(cdp: CdpTransport, opts: ObserveOpts = {}): Promis
     }
 
     if (isInteractive(i, t, attrs, l)) {
-      const role = roleOf(i, t, attrs);
+      let role = roleOf(i, t, attrs);
       if (!role) continue;
+      const ax = axByBackendId.get(nodes.backendNodeId[i]);
+      // Upgrade the generic 'clickable' role using the AX tree's computed role.
+      if (role === 'clickable' && ax?.role && INTERACTIVE_ROLES.has(ax.role.toLowerCase())) {
+        role = ax.role.toLowerCase();
+      }
       let label = paintedText(i, 100);
       const extras: string[] = [];
       if (!label && attrs.alt) label = clip(squash(attrs.alt), 100);
-      if (t === 'input' || t === 'textarea' || role === 'combobox') {
+      // Icon-only elements: fall back to the AX name, explicitly marked as
+      // page-claimed rather than painted (aria can lie; painted text can't).
+      if (!label && ax?.name) {
+        label = clip(ax.name, 100);
+        extras.push('(aria)');
+      } else if (label && ax?.name && ax.name !== label && !/[\p{L}\p{N}]/u.test(label)) {
+        // Painted label is a bare glyph ("✕", "☰"): keep it, annotate the claim.
+        extras.push(`(aria ${JSON.stringify(clip(ax.name, 60))})`);
+      }
+      if ((t === 'input' || t === 'textarea' || role === 'combobox') && role !== 'checkbox' && role !== 'radio') {
         const v = inputValue.get(i);
         if (v) extras.push(`value=${JSON.stringify(clip(v, 60))}`);
         if (attrs.placeholder) extras.push(`placeholder=${JSON.stringify(clip(attrs.placeholder, 60))}`);
@@ -302,38 +349,38 @@ export async function observe(cdp: CdpTransport, opts: ObserveOpts = {}): Promis
     (scrollable > 0 ? ` of ${Math.round(content.height)}px page` : '');
 
   const elements: ElementRecord[] = [];
+  const otherLines: string[] = [];
   const lines: string[] = [header];
-  let nextId = 1;
   let budgetUsed = estimateTextTokens(header);
   let dropped = 0;
 
   for (const entry of collapsed) {
     let line: string;
+    let record: ElementRecord | undefined;
     if ('summary' in entry) {
       line = `     ${entry.summary}`;
     } else if (entry.kind === 'text') {
       line = `     ${JSON.stringify(entry.label)}`;
     } else {
-      const id = nextId;
+      const backendNodeId = nodes.backendNodeId[entry.nodeIdx];
+      const id = ids.idFor(backendNodeId);
       const parts = [`[${id}]`, entry.role];
       if (entry.label || entry.kind === 'interactive') parts.push(JSON.stringify(entry.label));
       parts.push(...entry.extras);
       line = parts.join(' ');
       const l = layoutOf.get(entry.nodeIdx)!;
-      entry.record = {
-        id, backendNodeId: nodes.backendNodeId[entry.nodeIdx],
-        role: entry.role, label: entry.label,
+      record = {
+        id, backendNodeId, role: entry.role, label: entry.label,
         bounds: { x: l.x, y: l.y, w: l.w, h: l.h },
+        line,
       };
     }
     const cost = estimateTextTokens(line) + 1;
     if (budgetUsed + cost > maxTokens - 15) { dropped++; continue; }
     budgetUsed += cost;
     lines.push(line);
-    if ('record' in entry && entry.record) {
-      elements.push(entry.record);
-      nextId++;
-    }
+    if (record) elements.push(record);
+    else otherLines.push(line.trim());
   }
   if (dropped > 0) lines.push(`…${dropped} more items below (token budget); scroll or raise maxTokens`);
 
@@ -341,6 +388,7 @@ export async function observe(cdp: CdpTransport, opts: ObserveOpts = {}): Promis
   return {
     text,
     elements,
+    otherLines,
     meta: {
       url, title,
       viewport: { width: vp.w, height: vp.h },
