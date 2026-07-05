@@ -1,0 +1,19 @@
+{
+  "name": "byakugan",
+  "version": "0.0.1",
+  "description": "Token-efficient, render-truthful browser perception for LLM agents",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "m0": "tsx scripts/m0.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "playwright": "^1.61.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "tsx": "^4.23.0",
+    "typescript": "^6.0.3"
+  }
+}
