@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html><head><title>Byakugan Bench Shop</title>
+<style>
+  nav a { margin-right: 12px; cursor: pointer; text-decoration: underline; color: blue; }
+  .view { display: none; } .view.active { display: block; }
+  .product { margin: 8px 0; }
+  #status { font-weight: bold; }
+</style></head>
+<body>
+  <nav>
+    <a id="nav-shop" onclick="show('shop')">Shop</a>
+    <a id="nav-cart" onclick="show('cart')">Cart (<span id="cart-count">0</span>)</a>
+    <a id="nav-settings" onclick="show('settings')">Settings</a>
+  </nav>
+  <p id="status"></p>
+
+  <div id="shop" class="view active">
+    <h1>Products</h1>
+    <div class="product">Blue Mug — $12 <button onclick="add('Blue Mug', 12)">Add to cart</button></div>
+    <div class="product">Red Cup — $8 <button onclick="add('Red Cup', 8)">Add to cart</button></div>
+    <div class="product">Green Pot — $15 <button onclick="add('Green Pot', 15)">Add to cart</button></div>
+  </div>
+
+  <div id="cart" class="view">
+    <h1>Your Cart</h1>
+    <ul id="cart-items"></ul>
+    <p>Total: $<span id="total">0</span></p>
+    <button id="checkout" onclick="checkout()">Place order</button>
+  </div>
+
+  <div id="settings" class="view">
+    <h1>Settings</h1>
+    <label>Email <input id="email" type="text" placeholder="you@example.com"></label><br>
+    <input type="checkbox" id="news"> <label for="news">Subscribe to newsletter</label><br>
+    <label>Theme <select id="theme"><option>Light</option><option>Dark</option></select></label><br>
+    <button id="save" onclick="save()">Save settings</button>
+  </div>
+
+  <script>
+    const cart = [];
+    function show(v) {
+      document.querySelectorAll('.view').forEach(el => el.classList.toggle('active', el.id === v));
+      document.getElementById('status').textContent = '';
+    }
+    function add(name, price) {
+      cart.push({ name, price });
+      document.getElementById('cart-count').textContent = cart.length;
+      document.getElementById('status').textContent = name + ' added to cart';
+      const li = document.createElement('li');
+      li.textContent = name + ' — $' + price;
+      document.getElementById('cart-items').appendChild(li);
+      document.getElementById('total').textContent = cart.reduce((s, i) => s + i.price, 0);
+    }
+    function checkout() {
+      document.getElementById('status').textContent =
+        cart.length ? 'Order placed!' : 'Cart is empty';
+    }
+    function save() {
+      const ok = document.getElementById('email').value === 'a@b.c'
+        && document.getElementById('news').checked
+        && document.getElementById('theme').value === 'Dark';
+      document.getElementById('status').textContent = ok ? 'Saved!' : 'Error: check your inputs';
+    }
+  </script>
+</body></html>
