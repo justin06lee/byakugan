@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html><head><title>Dynamic Fixture</title></head>
+<body>
+  <h1>Counter</h1>
+  <button id="inc" onclick="bump()">Count: 0</button>
+  <button id="spawn" onclick="spawn()">Add banner</button>
+  <div id="slot"></div>
+  <script>
+    let n = 0;
+    function bump() { document.getElementById('inc').textContent = 'Count: ' + (++n); }
+    function spawn() {
+      const d = document.createElement('div');
+      d.innerHTML = '<a href="/promo" id="banner">Limited time offer</a>';
+      document.getElementById('slot').appendChild(d);
+    }
+  </script>
+</body></html>
