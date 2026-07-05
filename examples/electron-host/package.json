@@ -1,0 +1,14 @@
+{
+  "name": "byakugan-electron-host",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Minimal Electron app proving the fromElectronDebugger transport: a browser window plus a live Byakugan manifest panel",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "smoke": "BYAKUGAN_SMOKE=1 electron ."
+  },
+  "devDependencies": {
+    "electron": "^38.0.0"
+  }
+}

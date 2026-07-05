@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html><head><title>Iframe Fixture</title></head>
+<body>
+  <h1>Parent page</h1>
+  <button id="parent-btn">Parent button</button>
+  <iframe id="child" width="600" height="300" srcdoc='
+    <h2>Inside the frame</h2>
+    <button id="frame-btn" onclick="clicked()">Frame button</button>
+    <a href="#frame-link">Frame link</a>
+    <script>
+      function clicked() {
+        const p = document.createElement("p");
+        p.textContent = "frame clicked!";
+        document.body.appendChild(p);
+      }
+    </script>
+  '></iframe>
+</body></html>
