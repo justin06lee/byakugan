@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Byakugan panel</title>
+  <style>
+    body { margin: 0; background: #0d1117; color: #c9d1d9; font: 12px/1.5 ui-monospace, monospace; }
+    header { position: sticky; top: 0; background: #161b22; padding: 10px 14px; border-bottom: 1px solid #30363d; }
+    header b { color: #58a6ff; }
+    #meter { color: #7ee787; }
+    pre { padding: 12px 14px; white-space: pre-wrap; word-break: break-word; margin: 0; }
+    .diff { border-top: 1px dashed #30363d; color: #d2a8ff; }
+  </style>
+</head>
+<body>
+  <header><b>白眼</b> what the agent sees — <span id="meter">…</span></header>
+  <pre id="manifest">waiting for first observation…</pre>
+  <pre id="diff" class="diff"></pre>
+  <script>
+    window.byakugan.onUpdate((p) => {
+      document.getElementById('meter').textContent =
+        `${p.tokens} tokens this step · ${p.elements} elements`;
+      if (p.kind === 'manifest') {
+        document.getElementById('manifest').textContent = p.text;
+        document.getElementById('diff').textContent = '';
+      } else {
+        document.getElementById('manifest').textContent = p.fullText;
+        document.getElementById('diff').textContent = 'last diff (what the agent paid for):\n' + p.text;
+      }
+    });
+  </script>
+</body>
+</html>
