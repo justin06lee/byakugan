@@ -1,6 +1,12 @@
-# 白眼 byakugan
+<p align="center">
+  <img src="assets/byakugan.svg" width="300" height="300" alt="byakugan logo — a star-framed eye">
+</p>
 
-**Cheap, trustworthy eyes for LLM browser agents.**
+<h1 align="center">byakugan</h1>
+
+<p align="center">Cheap, trustworthy eyes for LLM browser agents.</p>
+
+---
 
 Byakugan lets an AI agent "see" a web page for a few hundred tokens instead of
 thousands — and guarantees the AI only sees what a human user would actually
