@@ -1,5 +1,5 @@
 {
-  "name": "byakugan",
+  "name": "@justin06lee/byakugan",
   "version": "0.1.0",
   "description": "Token-efficient, render-truthful browser perception for LLM agents — the model only sees what the user can see",
   "type": "module",
@@ -9,15 +9,38 @@
     "type": "git",
     "url": "git+https://github.com/justin06lee/byakugan.git"
   },
-  "keywords": ["llm", "agent", "browser", "cdp", "chromium", "playwright", "electron", "accessibility", "computer-use", "token-efficiency"],
-  "engines": { "node": ">=20" },
+  "keywords": [
+    "llm",
+    "agent",
+    "browser",
+    "cdp",
+    "chromium",
+    "playwright",
+    "electron",
+    "accessibility",
+    "computer-use",
+    "token-efficiency"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
-    "./transports": { "types": "./dist/transports.d.ts", "import": "./dist/transports.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./transports": {
+      "types": "./dist/transports.d.ts",
+      "import": "./dist/transports.js"
+    }
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsup",
     "m0": "tsx scripts/m0.ts",
