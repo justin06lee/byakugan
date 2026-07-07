@@ -30,6 +30,9 @@ export type ChangeHint = { kind: 'navigated'; url: string } | { kind: 'loaded' }
 export class Byakugan {
   private ids = new IdAllocator();
   private last: Manifest | null = null;
+  /** Every element seen this document generation, by id — lets resolve() find
+   *  elements that have scrolled out of the current viewport. */
+  private seen = new Map<number, ElementRecord>();
   private navPending = false;
   private changeListeners = new Set<(hint: ChangeHint) => void>();
   /** Verified input dispatch bound to this target's manifest IDs. */
@@ -70,9 +73,11 @@ export class Byakugan {
   async observe(opts: ObserveOpts = {}): Promise<Manifest> {
     if (this.navPending) {
       this.ids.clear(); // new page: keep IDs short
+      this.seen.clear();
       this.navPending = false;
     }
     const m = await observe(this.cdp, { ...opts, ids: this.ids });
+    for (const e of m.elements) this.seen.set(e.id, e);
     this.last = m;
     return m;
   }
@@ -189,10 +194,15 @@ export class Byakugan {
     return { data: Buffer.from(shot.data, 'base64'), width, height, tokens: estimateImageTokens(width, height) };
   }
 
-  /** Element record for a manifest ID (for hosts dispatching input themselves). */
+  /**
+   * Element record for a manifest ID (for hosts dispatching input themselves).
+   * Prefers the last manifest; falls back to any element seen earlier in this
+   * document generation (e.g. one that scrolled out of the viewport) — its
+   * `bounds` are then stale, but actions re-derive geometry at dispatch time.
+   */
   resolve(id: number): ElementRecord {
-    const el = this.last?.elements.find((e) => e.id === id);
-    if (!el) throw new Error(`resolve(${id}): no such element in last manifest — observe() first`);
+    const el = this.last?.elements.find((e) => e.id === id) ?? this.seen.get(id);
+    if (!el) throw new Error(`resolve(${id}): no such element seen on this page — observe() first`);
     return el;
   }
 }
