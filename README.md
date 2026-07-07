@@ -153,7 +153,7 @@ loop (manifest → LLM → action → diff) is in
 
 ```bash
 npm install && npx playwright install chromium
-npm test          # 17 fixture tests (perception, actions, hardening)
+npm test          # 18 fixture tests (perception, actions, hardening)
 npm run m0        # 10 real pages: byakugan vs DOM vs AX vs screenshot tokens
 npm run bench     # live LLM agent over 5 scripted tasks (uses the `claude` CLI)
 ```

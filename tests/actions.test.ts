@@ -104,6 +104,36 @@ test('collapsed list rows remain actionable via their IDs', async () => {
   await page.close();
 });
 
+test('element scrolled out of the viewport is still actionable by its ID', async () => {
+  const { page, eyes } = await open('list.html');
+  await page.setViewportSize({ width: 600, height: 200 });
+  const m = await eyes.observe();
+  const first = m.elements.find((e) => e.label === 'Result item number 1')!;
+  assert.ok(first, 'first row must be in the initial manifest');
+
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await page.waitForTimeout(150);
+  await eyes.diff();
+  assert.ok(
+    !eyes.lastManifest!.elements.some((e) => e.id === first.id),
+    'first row should have scrolled out of the current manifest',
+  );
+
+  // resolve() falls back to the seen-map; click re-scrolls + hit-tests fresh.
+  const res = await eyes.act.click(first.id);
+  assert.equal(res.ok, true);
+  await page.waitForTimeout(200);
+  assert.match(page.url(), /item\/1$/);
+
+  // IDs do not survive navigation: the seen-map clears with the allocator.
+  await page.goto(fixture('basic.html'));
+  await page.waitForTimeout(100);
+  const after = await eyes.observe();
+  const maxId = Math.max(...after.elements.map((e) => e.id));
+  assert.throws(() => eyes.resolve(maxId + 1), /no such element seen on this page/);
+  await page.close();
+});
+
 test('press Enter submits, scroll changes viewport', async () => {
   const { page, eyes } = await open('list.html');
   await page.setViewportSize({ width: 600, height: 200 });

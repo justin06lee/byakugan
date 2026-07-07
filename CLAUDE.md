@@ -90,7 +90,7 @@ scripts/
   m0.ts           10-real-page token comparison (writes m0-output/)
   bench.ts        live-LLM benchmark: 5 fixture tasks with verify predicates
 fixtures/         self-contained HTML test pages (see "Fixtures" below)
-tests/            17 node:test tests via tsx: perception(8)/actions(5)/hardening(4)
+tests/            18 node:test tests via tsx: perception(8)/actions(6)/hardening(4)
 SPEC.md           original design spec with milestones M0–M4 (all shipped)
 ```
 
@@ -144,6 +144,11 @@ title, viewport, scrollPct, frameCount, tokens} }`;
   text on navigation or >50% element churn. No change → `"NO CHANGE"`.
 - `look(id | rect, {maxLongEdge=768})`: `DOM.getBoxModel` → viewport→document
   coords → `Page.captureScreenshot` with clip + `captureBeyondViewport`.
+- `resolve(id)`: last manifest first, then falls back to a `seen` map of every
+  element observed this document generation — so elements that merely scrolled
+  out of the viewport stay actionable (actions re-derive geometry at dispatch;
+  truly removed nodes still fail cleanly there). Cleared with the IdAllocator
+  on navigation.
 - `onWorldChanged(cb)`: navigation/load `ChangeHint`s for the host.
 
 ## How actions verify (src/actions.ts)
@@ -229,6 +234,6 @@ text/value and dispatches `input`+`change` events.
 
 ## Current state
 
-v0.1.0 tagged and pushed; M0–M4 all shipped (see SPEC.md milestones). 17/17
+v0.1.0 tagged and pushed; M0–M4 all shipped (see SPEC.md milestones). 18/18
 tests green, typecheck clean, `npm pack` → 34.6 kB, 9 files, zero deps.
 Unpublished.
