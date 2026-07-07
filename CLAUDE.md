@@ -81,7 +81,7 @@ src/
                   1568px long-edge downscale — Claude's formula)
   transport.ts    CdpTransport { send, on, detach }
   transports/     fromPlaywright / fromElectronDebugger / fromWebSocket
-                  (subpath export `byakugan/transports`)
+                  (subpath export `@justin06lee/byakugan/transports`)
 examples/
   agent.ts        demo agent loop + ClaudeCliLLM (spawns `claude -p`) and
                   AnthropicApiLLM — reference, not API
@@ -211,11 +211,15 @@ text/value and dispatches `input`+`change` events.
 
 ## Conventions & constraints
 
-- **Git**: feature branch per unit of work, `--no-ff` merge to main, annotated
-  tags per milestone, Conventional Commits. Pushing to origin (private repo)
-  is pre-authorized.
-- **npm publish is NOT authorized** — `prepublishOnly` gates exist, but the
-  owner decides name/timing. Prep only.
+- **Git**: default branch is `master`; feature branch per unit of work,
+  `--no-ff` merge to master, annotated tags per release, Conventional Commits.
+  Pushing to origin (private repo) is pre-authorized.
+- **npm**: published as `@justin06lee/byakugan` (the bare name `byakugan` is
+  taken on npm). Releases: bump version, commit, annotated `vX.Y.Z` tag, then
+  `npm publish --access public` — the `prepublishOnly` gate runs
+  typecheck+tests+build, and the final step needs a one-time password only the
+  owner can complete in a browser. Prep everything; the owner finishes the
+  publish.
 - **Zero runtime dependencies** is a hard constraint. Playwright is a
   devDependency (tests/benchmarks only).
 - Node ≥ 20, ESM only, strict TS (typescript 6: `ignoreDeprecations: "6.0"`
@@ -234,6 +238,7 @@ text/value and dispatches `input`+`change` events.
 
 ## Current state
 
-v0.1.0 tagged and pushed; M0–M4 all shipped (see SPEC.md milestones). 18/18
-tests green, typecheck clean, `npm pack` → 34.6 kB, 9 files, zero deps.
-Unpublished.
+v0.2.0 tagged, pushed, and published to npm as `@justin06lee/byakugan`;
+M0–M4 all shipped (see SPEC.md milestones). 18/18 tests green, typecheck
+clean, `npm pack` → 38.4 kB, 10 files, zero deps. v0.2.0 added the
+`resolve()` seen-map fallback for scrolled-out elements.

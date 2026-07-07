@@ -1,5 +1,12 @@
 # Byakugan — Library Spec
 
+> **Historical document** — the original design spec, kept as written. Where
+> it differs from what shipped, [CLAUDE.md](CLAUDE.md) and [README.md](README.md)
+> are authoritative: the package published as `@justin06lee/byakugan` (the bare
+> name was taken), there is no `fromPuppeteer` adapter (use `fromWebSocket`),
+> and the bench harness lives in `scripts/bench.ts` rather than a
+> `byakugan/bench` subpath export.
+
 A standalone TypeScript library that gives LLM browser agents **token-efficient,
 render-truthful perception**: the model only ever sees what a human user can
 see, as compact text derived from Chromium's layout tree, with cropped

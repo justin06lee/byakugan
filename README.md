@@ -107,9 +107,13 @@ Byakugan is a library, not a browser or an agent. It attaches to any Chromium
 you already have, through anything that speaks the Chrome DevTools Protocol.
 Zero runtime dependencies.
 
+```bash
+npm install @justin06lee/byakugan
+```
+
 ```ts
-import { Byakugan } from 'byakugan';
-import { fromPlaywright } from 'byakugan/transports';
+import { Byakugan } from '@justin06lee/byakugan';
+import { fromPlaywright } from '@justin06lee/byakugan/transports';
 // also: fromElectronDebugger(webContents), fromWebSocket(devtoolsUrl),
 // or implement the 3-method CdpTransport interface yourself
 
