@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/byakugan.svg" width="300" height="300" alt="byakugan logo — a star-framed eye">
+  <img src="assets/byakugan.svg" width="300" alt="byakugan logo — a manga panel of the byakugan eye">
 </p>
 
 <h1 align="center">byakugan</h1>
