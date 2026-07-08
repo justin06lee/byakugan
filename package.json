@@ -1,6 +1,6 @@
 {
   "name": "@justin06lee/byakugan",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Token-efficient, render-truthful browser perception for LLM agents — the model only sees what the user can see",
   "type": "module",
   "license": "MIT",
