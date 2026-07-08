@@ -48,6 +48,47 @@ test('iframe: same-process frame content is stitched in and actionable', async (
   await page.close();
 });
 
+test('HiDPI: snapshot geometry is normalized to CSS pixels (deviceScaleFactor 2)', async () => {
+  // DOMSnapshot reports device pixels; the viewport rect is CSS pixels. Without
+  // normalization, dpr-2 displays lose the lower half of every manifest and
+  // scrolled manifests go completely empty.
+  const page = await browser.newPage({ viewport: { width: 600, height: 400 }, deviceScaleFactor: 2 });
+  await page.goto(fixture('list.html'));
+  const eyes = await Byakugan.attach(await fromPlaywright(page));
+  const m = await eyes.observe();
+
+  // Element bounds must agree with Playwright's CSS-pixel boundingBox.
+  const first = m.elements.find((e) => e.label === 'Result item number 1')!;
+  assert.ok(first, 'first row missing from HiDPI manifest');
+  const box = await page.locator('a', { hasText: 'Result item number 1' }).first().boundingBox();
+  assert.ok(Math.abs(first.bounds.y - box!.y) < 2, `bounds.y ${first.bounds.y} vs CSS ${box!.y} — device-pixel leak`);
+
+  // Lower half of the viewport must be populated, not silently dropped.
+  assert.ok(
+    m.elements.some((e) => e.bounds.y > 200),
+    'no elements below the viewport midline — lower half dropped on HiDPI',
+  );
+
+  // A dpr-1 page with the same viewport must see the same world.
+  const page1 = await browser.newPage({ viewport: { width: 600, height: 400 }, deviceScaleFactor: 1 });
+  await page1.goto(fixture('list.html'));
+  const eyes1 = await Byakugan.attach(await fromPlaywright(page1));
+  const m1 = await eyes1.observe();
+  assert.equal(m.elements.length, m1.elements.length, 'HiDPI manifest diverges from dpr-1 manifest');
+  await page1.close();
+
+  // After scrolling, the manifest must not go empty.
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await page.waitForTimeout(150);
+  const d = await eyes.diff();
+  assert.ok(d.manifest.elements.length > 0, 'scrolled HiDPI manifest is empty');
+  const last = d.manifest.elements.filter((e) => /Result item number \d+/.test(e.label)).at(-1);
+  assert.ok(last, 'no rows visible after scrolling on HiDPI');
+  const res = await eyes.act.click(last!.id);
+  assert.equal(res.ok, true, `click after scroll failed: ${JSON.stringify(res)}`);
+  await page.close();
+});
+
 test('select: manifest exposes options and current value', async () => {
   const { page, eyes } = await open('basic.html');
   const m = await eyes.observe();

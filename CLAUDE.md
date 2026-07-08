@@ -90,7 +90,7 @@ scripts/
   m0.ts           10-real-page token comparison (writes m0-output/)
   bench.ts        live-LLM benchmark: 5 fixture tasks with verify predicates
 fixtures/         self-contained HTML test pages (see "Fixtures" below)
-tests/            18 node:test tests via tsx: perception(8)/actions(6)/hardening(4)
+tests/            19 node:test tests via tsx: perception(8)/actions(6)/hardening(5)
 SPEC.md           original design spec with milestones M0–M4 (all shipped)
 ```
 
@@ -100,6 +100,14 @@ One `DOMSnapshot.captureSnapshot` call (with computed styles for
 `display/visibility/opacity/cursor/clip/clip-path/background-color`) returns
 parallel arrays describing the layout tree. Pipeline:
 
+0. **DPR normalization** — `DOMSnapshot` bounds and document scroll offsets
+   can be *device* pixels (real HiDPI displays, e.g. Electron on Retina) while
+   the viewport rect, thresholds, and the action layer are CSS pixels. The
+   ratio `visualViewport.clientWidth / cssVisualViewport.clientWidth` measures
+   the actual mismatch (1 where spaces already agree — headless Playwright
+   reports CSS px even at deviceScaleFactor 2) and all snapshot geometry is
+   divided by it up front. Without this, HiDPI silently drops the lower half
+   of every viewport and empties scrolled manifests.
 1. **Document recursion** — `emitDoc(docIdx, ox, oy, depth)` walks each
    document; same-process iframes recurse via `contentDocumentIndex` with
    scroll-adjusted offsets so child coordinates land in root-viewport space.
@@ -158,7 +166,11 @@ bounds:
 
 1. `DOM.getContentQuads` for fresh geometry (retries after
    `scrollIntoViewIfNeeded` if empty).
-2. `DOM.getNodeForLocation` at the target point → topmost node.
+2. `DOM.getNodeForLocation` at the target point → topmost node. NOTE: this
+   CDP method takes *document* coordinates while `getContentQuads` returns
+   *viewport-relative* ones — hitTest adds `cssVisualViewport.pageX/pageY`
+   before calling it. Don't remove that adjustment; without it every click on
+   a scrolled page false-positives as "blocked".
 3. Containment check via `Runtime.callFunctionOn`
    (`this.contains(o) || o.contains(this)`).
 4. Mismatch → `{ok:false, error, blockedBy: "tag#id.class"}` — the structured
@@ -180,7 +192,7 @@ text/value and dispatches `input`+`change` events.
 
 ## Testing & benchmarks
 
-- `npm test` — 17 tests over local `fixtures/*.html` via Playwright chromium.
+- `npm test` — 19 tests over local `fixtures/*.html` via Playwright chromium.
   Notable locked-in guarantees: all 6 `SECRET-*` hidden-text variants absent
   from manifests (hidden.html); spoofed `aria-label="Pay $500..."` renders as
   painted "Pay $5"; modal occlusion drops covered content AND blocks clicks;
@@ -239,6 +251,8 @@ text/value and dispatches `input`+`change` events.
 ## Current state
 
 v0.2.0 tagged, pushed, and published to npm as `@justin06lee/byakugan`;
-M0–M4 all shipped (see SPEC.md milestones). 18/18 tests green, typecheck
-clean, `npm pack` → 38.4 kB, 10 files, zero deps. v0.2.0 added the
-`resolve()` seen-map fallback for scrolled-out elements.
+M0–M4 all shipped (see SPEC.md milestones). 19/19 tests green, typecheck
+clean, zero deps. v0.2.0 added the `resolve()` seen-map fallback for
+scrolled-out elements. v0.2.1 fixed two HiDPI/scroll bugs: DOMSnapshot
+device-pixel geometry is normalized to CSS px (pipeline stage 0), and
+hitTest converts viewport→document coords for `DOM.getNodeForLocation`.

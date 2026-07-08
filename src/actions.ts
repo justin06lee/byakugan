@@ -76,8 +76,17 @@ export class Actions {
   private async hitTest(backendNodeId: number, x: number, y: number): Promise<{ hit: boolean; blocker?: string }> {
     let topId: number;
     try {
+      // getContentQuads is viewport-relative but getNodeForLocation expects
+      // document coordinates — on a scrolled page the unadjusted point lands on
+      // whatever sits N-scrolled-pixels above and falsely reports "blocked".
+      let px = x, py = y;
+      try {
+        const metrics = await this.cdp.send<any>('Page.getLayoutMetrics');
+        px += metrics.cssVisualViewport.pageX;
+        py += metrics.cssVisualViewport.pageY;
+      } catch { /* no metrics — fall back to unadjusted (correct at scroll 0) */ }
       const r = await this.cdp.send<{ backendNodeId: number }>('DOM.getNodeForLocation', {
-        x: Math.round(x), y: Math.round(y), includeUserAgentShadowDOM: false,
+        x: Math.round(px), y: Math.round(py), includeUserAgentShadowDOM: false,
       });
       topId = r.backendNodeId;
     } catch {
