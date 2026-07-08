@@ -119,6 +119,12 @@ export async function observe(cdp: CdpTransport, opts: ObserveOpts = {}): Promis
   const vv = metrics.cssVisualViewport;
   const content = metrics.cssContentSize;
   const vp: Rect = { x: vv.pageX, y: vv.pageY, w: vv.clientWidth, h: vv.clientHeight };
+  // DOMSnapshot bounds and scroll offsets are device pixels; everything else
+  // here (viewport, size thresholds, action-layer quads) is CSS pixels. On
+  // HiDPI displays (dpr 2) the mismatch silently drops the lower half of the
+  // viewport and empties scrolled manifests — normalize at the source.
+  const dpr = (metrics.visualViewport?.clientWidth && vv.clientWidth)
+    ? metrics.visualViewport.clientWidth / vv.clientWidth : 1;
 
   const snap = await cdp.send<any>('DOMSnapshot.captureSnapshot', {
     computedStyles: STYLE_KEYS,
@@ -170,7 +176,7 @@ export async function observe(cdp: CdpTransport, opts: ObserveOpts = {}): Promis
       const style: Record<string, string> = {};
       STYLE_KEYS.forEach((k, si) => (style[k] = str(lay.styles[li]?.[si])));
       layoutOf.set(lay.nodeIndex[li], {
-        x: b[0] + ox, y: b[1] + oy, w: b[2], h: b[3],
+        x: b[0] / dpr + ox, y: b[1] / dpr + oy, w: b[2] / dpr, h: b[3] / dpr,
         style,
         text: str(lay.text?.[li]),
         paint: lay.paintOrders?.[li] ?? 0,
@@ -342,7 +348,7 @@ export async function observe(cdp: CdpTransport, opts: ObserveOpts = {}): Promis
         if (l) {
           const childIdx = ctx.contentDoc.get(i)!;
           const childDoc = snap.documents[childIdx];
-          emitDoc(childIdx, l.x - (childDoc.scrollOffsetX ?? 0), l.y - (childDoc.scrollOffsetY ?? 0), depth + 1);
+          emitDoc(childIdx, l.x - (childDoc.scrollOffsetX ?? 0) / dpr, l.y - (childDoc.scrollOffsetY ?? 0) / dpr, depth + 1);
         }
         consume(ctx, i);
         continue;
